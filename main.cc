@@ -24,6 +24,10 @@ const long long vpre=2000;
 const long long capT=400000;
 const long long capT2=1000;
 
+const double distCut = 2000;
+
+const double nTag_max = 800;
+
 int main(int argc,char** argv) {
 	gROOT->ProcessLine("#include <vector>");
 	if( argc != 3 ) {
@@ -61,8 +65,8 @@ int main(int argc,char** argv) {
 	cout << "nevent: " << nevent << endl;
 
 	for( int jentry = 0; jentry < nevent; ++jentry ) {
-		if(jentry % (nevent/1000) == 0){
-			printf("\r%d/%d ( %.3f%% )",jentry+1,nevent,100.0*(jentry+1)/nevent);
+		if(jentry % (nevent/10000) == 0){
+			printf("\r%d/%d ( %.2f%% )",jentry+1,nevent,100.0*(jentry+1)/nevent);
 			fflush(stdout);
 		}
 		adrec.GetEntry(jentry);
@@ -122,7 +126,7 @@ int main(int argc,char** argv) {
 						double dx=candid[i][2].x-candid[i][1].x;
 						double dy=candid[i][2].y-candid[i][1].y;
 						double dz=candid[i][2].z-candid[i][1].z;
-						bool dist=sqrt(dx*dx+dy*dy+dz*dz)<2500;
+						bool dist=sqrt(dx*dx+dy*dy+dz*dz)<distCut;
 						if(cap&&multP&&multD&&delay&&dist)
 							out->FillIBD(candid[i][1],candid[i][2],muon[i]);
 						candid[i].pop_front();
@@ -146,7 +150,7 @@ int main(int argc,char** argv) {
 			if(evt.isDelay){
 				for(size_t i=muon[det].size();i>0;--i){
 					float nTag_dt = float(evt.t-muon[det][i-1].t) / 1e3;
-					if( nTag_dt > 1000 )
+					if( nTag_dt > nTag_max )
 						break;
 					muon[det][i-1].nTag_e.push_back(evt.e);	
 					muon[det][i-1].nTag_dt.push_back(nTag_dt);	
