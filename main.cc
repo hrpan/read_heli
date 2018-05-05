@@ -117,22 +117,30 @@ int main(int argc,char** argv) {
 //---------------------------------------------------------------------------------
 //					He/Li SPECTRUM
 //---------------------------------------------------------------------------------
-				if(evtbuf[i][0].isDelay){
-					while(candid[i].size()>3){
-						bool delay=candid[i][2].isDelay;
-						bool cap=candid[i][2].t-candid[i][1].t<capT && candid[i][2].t-candid[i][1].t>capT2;
-						bool multP=candid[i][2].t-candid[i][0].t>2*capT;
-						bool multD=candid[i][3].t-candid[i][2].t>capT;
-						double dx=candid[i][2].x-candid[i][1].x;
-						double dy=candid[i][2].y-candid[i][1].y;
-						double dz=candid[i][2].z-candid[i][1].z;
-						bool dist=sqrt(dx*dx+dy*dy+dz*dz)<distCut;
-						if(cap&&multP&&multD&&delay&&dist)
-							out->FillIBD(candid[i][1],candid[i][2],muon[i]);
-						candid[i].pop_front();
-					}
-				}
+/
+				size_t c_size = candid[i].size();
+				while(c_size>3 && candid[i][c_size-1].t-candid[i][2].t>capT){
+					bool delay = candid[i][2].isDelay;
+					bool cap = (candid[i][2].t - candid[i][1].t < capT &&
+								candid[i][2].t - candid[i][1].t > capT2);
+					bool multP = candid[i][2].t - candid[i][0].t > 2 * capT;
+					bool multD = true;
 
+					for(size_t dIDX=3;dIDX<c_size&&multD;++dIDX)
+						multD = !(candid[i][dIDX].isDelay && (candid[i][dIDX].t - candid[i][2].t) < capT);
+					
+					float dx = candid[i][2].x - candid[i][1].x;
+					float dy = candid[i][2].y - candid[i][1].y;
+					float dz = candid[i][2].z - candid[i][1].z;
+
+					bool dist = sqrt( dx * dx + dy * dy + dz * dz ) < distCut;
+
+					if( delay && cap && multP && multD && dist )
+						out->FillIBD(candid[i][1],candid[i][2],muon[i]);
+
+					candid[i].pop_front();
+				}
+			
 				evtbuf[i].pop_front();
 			}
 		}
