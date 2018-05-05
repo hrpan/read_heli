@@ -40,7 +40,7 @@ int main(int argc,char** argv) {
 
 	TChain *adch = new TChain("/Event/Rec/AdSimple");
 	TChain *csch = new TChain("/Event/Data/CalibStats");
-	
+
 	while(getline(list,fname)){
 		cout << fname << endl;
 		adch->Add(fname.c_str());
@@ -117,8 +117,9 @@ int main(int argc,char** argv) {
 //---------------------------------------------------------------------------------
 //					He/Li SPECTRUM
 //---------------------------------------------------------------------------------
-/
+
 				size_t c_size = candid[i].size();
+				
 				while(c_size>3 && candid[i][c_size-1].t-candid[i][2].t>capT){
 					bool delay = candid[i][2].isDelay;
 					bool cap = (candid[i][2].t - candid[i][1].t < capT &&
@@ -134,11 +135,12 @@ int main(int argc,char** argv) {
 					float dz = candid[i][2].z - candid[i][1].z;
 
 					bool dist = sqrt( dx * dx + dy * dy + dz * dz ) < distCut;
-
+					
 					if( delay && cap && multP && multD && dist )
 						out->FillIBD(candid[i][1],candid[i][2],muon[i]);
 
 					candid[i].pop_front();
+					--c_size;
 				}
 			
 				evtbuf[i].pop_front();
