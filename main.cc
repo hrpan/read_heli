@@ -24,7 +24,7 @@ const long long vpre=2000;
 const long long capT=400000;
 const long long capT2=1000;
 
-const double distCut = 2000;
+const double distCut = 1500;
 
 const double nTag_max = 800;
 
@@ -54,7 +54,7 @@ int main(int argc,char** argv) {
 	outf->cd();
 	outfile *out;
 
-	int nevent = adrec.fChain->GetEntries();
+	size_t nevent = adrec.fChain->GetEntries();
 
 	deque<deque<PhyEvent> > evtbuf(4),candid(4),muon(4);
 
@@ -64,9 +64,9 @@ int main(int argc,char** argv) {
 
 	cout << "nevent: " << nevent << endl;
 
-	for( int jentry = 0; jentry < nevent; ++jentry ) {
-		if(jentry % (nevent/10000) == 0){
-			printf("\r%d/%d ( %.2f%% )",jentry+1,nevent,100.0*(jentry+1)/nevent);
+	for( size_t jentry = 0; jentry < nevent; ++jentry ) {
+		if(jentry % (nevent/1000) == 0){
+			printf("\r%zu/%zu ( %.1f%% )",jentry+1,nevent,100.0*(jentry+1)/nevent);
 			fflush(stdout);
 		}
 		adrec.GetEntry(jentry);
