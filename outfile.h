@@ -2,6 +2,7 @@
 #ifndef outfile_h
 #define outfile_h
 #include "PhyEvent.h"
+#include <cmath>
 class outfile {
 
 public : 
