@@ -10,9 +10,9 @@
 #include <fstream>
 //#include "Hists.h"
 #include "TChain.h"
-#include "math.h"
 #include "outfile.h"
 #include <cstdlib>
+#include <cmath>
 #define startT 1324339200 
 #define maxT 5000000000
 using namespace std;
@@ -27,6 +27,9 @@ const long long capT2=1000;
 const double distCut = 1500;
 
 const double nTag_max = 800;
+
+void printProgress(size_t current, size_t total);
+void selectIBD(deque<PhyEvent> &candid,deque<PhyEvent> &muons,outfile *out);
 
 int main(int argc,char** argv) {
 	gROOT->ProcessLine("#include <vector>");
@@ -59,16 +62,15 @@ int main(int argc,char** argv) {
 	deque<PhyEvent> evtbuf[4],candid[4],muon[4];
 
 	long long mu[4]={0,0,0,0};
-	long long muSH[4]={0,0,0,0};
 	int det,site,ads;
 
 	cout << "nevent: " << nevent << endl;
 
 	for( size_t jentry = 0; jentry < nevent; ++jentry ) {
-		if(jentry % (nevent/1000) == 0){
-			printf("\r%zu/%zu ( %.1f%% )",jentry+1,nevent,100.0*(jentry+1)/nevent);
-			fflush(stdout);
-		}
+
+		if(jentry % (nevent/1000) == 0)
+			printProgress(jentry, nevent);
+		
 		adrec.GetEntry(jentry);
 		calst.GetEntry(jentry);
 
@@ -89,62 +91,27 @@ int main(int argc,char** argv) {
 		if(!evt.isGood) continue;
 
 		if(evt.isADMu){
-			for(int i=evtbuf[det].size()-1;i>=0&&evtbuf[det][i].dtnAD==-1;--i)
-				evtbuf[det][i].dtnAD=evt.t-evtbuf[det][i].t;
-			if(evt.isSHMu)
-				muSH[det]=evt.t;
 			mu[det]=max(mu[det],evt.t+vAD);
 			muon[det].push_back(evt);
 			continue;
 		}else if(evt.isWPMu){
 			for(int i=0;i<ads;++i){
-				for(int j=evtbuf[i].size()-1;j>=0&&evtbuf[i][j].dtnWP==-1;--j)	
-					evtbuf[i][j].dtnWP=evt.t-evtbuf[i][j].t;
+				bool flag = false;
+				while(!evtbuf[i].empty()){
+					bool pass_n = evt.t-evtbuf[i][0].t > vpre;
+					flag = flag || pass_n;
+					if(pass_n)
+						candid[i].push_back(evtbuf[i][0]);
+					
+					evtbuf[i].pop_front();
+				}
+				if(flag)
+					selectIBD(candid[i],muon[i],out);
+//				for(int j=evtbuf[i].size()-1;j>=0&&evtbuf[i][j].dtnWP==-1;--j)	
+//					evtbuf[i][j].dtnWP=evt.t-evtbuf[i][j].t;
 				mu[i]=max(mu[i],evt.t+vWS);
 			}
 			continue;
-		}
-
-		for(int i=0;i<ads;++i){
-//			while(!evtbuf[i].empty() && evtbuf[i][0].dtnAD!=-1 && evtbuf[i][0].dtnWP!=-1){
-			while(!evtbuf[i].empty() && evtbuf[i][0].dtnWP!=-1){
-				//bool passnMu = evtbuf[i][0].dtnAD>vpre && evtbuf[i][0].dtnWP>vpre;
-				bool passnMu = evtbuf[i][0].dtnWP>vpre;
-				evtbuf[i][0].passMu = passnMu && evtbuf[i][0].passMu;
-				if(evtbuf[i][0].passMu)
-					candid[i].push_back(evtbuf[i][0]);
-
-//---------------------------------------------------------------------------------
-//					He/Li SPECTRUM
-//---------------------------------------------------------------------------------
-
-				size_t c_size = candid[i].size();
-				
-				while(c_size>3 && candid[i][c_size-1].t-candid[i][2].t>capT){
-					bool delay = candid[i][2].isDelay;
-					bool cap = (candid[i][2].t - candid[i][1].t < capT &&
-								candid[i][2].t - candid[i][1].t > capT2);
-					bool multP = candid[i][2].t - candid[i][0].t > 2 * capT;
-					bool multD = true;
-
-					for(size_t dIDX=3;dIDX<c_size&&multD;++dIDX)
-						multD = !(candid[i][dIDX].isDelay && (candid[i][dIDX].t - candid[i][2].t) < capT);
-					
-					float dx = candid[i][2].x - candid[i][1].x;
-					float dy = candid[i][2].y - candid[i][1].y;
-					float dz = candid[i][2].z - candid[i][1].z;
-
-					bool dist = sqrt( dx * dx + dy * dy + dz * dz ) < distCut;
-					
-					if( delay && cap && multP && multD && dist )
-						out->FillIBD(candid[i][1],candid[i][2],muon[i]);
-
-					candid[i].pop_front();
-					--c_size;
-				}
-			
-				evtbuf[i].pop_front();
-			}
 		}
 
 		if(det>=ads) 
@@ -174,9 +141,7 @@ int main(int argc,char** argv) {
 			}
 */
 
-			if(!evt.passMu) continue;
-
-			evtbuf[det].push_back(evt);
+			if(evt.passMu) 	evtbuf[det].push_back(evt);
 		}
 	} // end of event loop
 
@@ -185,3 +150,44 @@ int main(int argc,char** argv) {
 	return 0;
 }
 
+void printProgress(size_t current, size_t total){
+
+	printf("\r%zu/%zu ( %.1f%% )",current+1,total,100.0*(current+1)/total);
+	fflush(stdout);
+
+}
+
+void selectIBD(deque<PhyEvent> &candid,deque<PhyEvent> &muons,outfile *out){
+
+	size_t c_size = candid.size();
+	
+	while(c_size>3){
+
+		PhyEvent &evt_p = candid[1];
+		PhyEvent &evt_d = candid[2];
+
+		if(candid[c_size-1].t - evt_d.t < capT) break;
+
+		bool delay = evt_d.isDelay;
+		bool cap = (evt_d.t - evt_p.t < capT && evt_d.t - evt_p.t > capT2);
+		bool multP = evt_d.t - candid[0].t > 2 * capT;
+		bool multD = true;
+		for(size_t dIDX=3;dIDX<c_size&&multD;++dIDX)
+			multD = !(candid[dIDX].isDelay && (candid[dIDX].t - evt_d.t) < capT);
+		
+		float dx = evt_d.x - evt_p.x;
+		float dy = evt_d.y - evt_p.y;
+		float dz = evt_d.z - evt_p.z;
+
+		bool dist = sqrt( dx * dx + dy * dy + dz * dz ) < distCut;
+		
+		if( delay && cap && multP && multD && dist )
+			out->FillIBD(evt_p,evt_d,muons);
+
+		candid.pop_front();
+		--c_size;
+
+		
+	}
+
+}
