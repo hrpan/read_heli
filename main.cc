@@ -56,7 +56,7 @@ int main(int argc,char** argv) {
 
 	size_t nevent = adrec.fChain->GetEntries();
 
-	deque<deque<PhyEvent> > evtbuf(4),candid(4),muon(4);
+	deque<PhyEvent> evtbuf[4],candid[4],muon[4];
 
 	long long mu[4]={0,0,0,0};
 	long long muSH[4]={0,0,0,0};
